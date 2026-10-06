@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Excel | Control de Almacén</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="reader-section">
+        <div class="reader-container">
+            <div class="reader-header">
+                <div class="reader-logo"><i class="fas fa-boxes-stacked"></i></div>
+                <h1>Control de Almacén</h1>
+                <p>Prendas de vestir · Stock · Movimientos · Traslados</p>
+            </div>
+            <div class="upload-card">
+                <div class="upload-icon-circle"><i class="fas fa-cloud-arrow-up"></i></div>
+                <h2>Selecciona tu archivo</h2>
+                <p>Formatos soportados: .xlsx, .xls, .xlsm</p>
+                <label for="excelFile" class="btn-accent"><i class="fas fa-folder-open"></i> Elegir archivo</label>
+                <input type="file" id="excelFile" accept=".xlsx, .xls, .xlsm">
+
+                <div id="progressBox" class="progress-box" style="display:none;">
+                    <div class="progress-bar-track">
+                        <div id="progressBar" class="progress-bar-fill" style="width:0%"></div>
+                    </div>
+                    <div class="progress-info">
+                        <span id="progressLabel">Procesando…</span>
+                        <b id="progressPct">0%</b>
+                    </div>
+                </div>
+
+                <div id="sheetStatus" class="sheet-status" style="display: none;">
+                    <p class="status-title">Hojas detectadas:</p>
+                    <ul id="sheetList" class="sheet-list"></ul>
+                    <button id="btnSubir" class="btn-accent"><i class="fas fa-cloud-arrow-up"></i> Subir a Supabase</button>
+                </div>
+                <div id="mensaje" class="mensaje"></div>
+            </div>
+        </div>
+    </div>
+    <script src="js/index.js"></script>
+</body>
+</html>

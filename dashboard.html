@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Dashboard Comercial | Pedidos Especias</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+<body>
+
+    <div id="loading" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Cargando dashboard…</p>
+    </div>
+
+    <header class="topbar" id="topbar" hidden>
+        <div class="brand">
+            <div class="brand-mark"><i class="fas fa-pepper-hot"></i></div>
+            <div class="brand-text">
+                <strong>PEDIDOS</strong>
+                <span>| Especias y Hierbas</span>
+            </div>
+        </div>
+        <div class="chips">
+            <div class="chip"><span>Tottus</span><b id="chipTottus">—</b></div>
+            <div class="chip"><span>SPSA</span><b id="chipSPSA">—</b></div>
+        </div>
+        <div class="topbar-right">
+            <span class="live"><i></i>Datos en vivo</span>
+            <button type="button" class="icon-btn js-refresh" title="Actualizar datos" aria-label="Actualizar datos">
+                <i class="fas fa-rotate"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="shell" id="shell" hidden>
+        <aside class="sidebar">
+            <p class="nav-label">Paneles</p>
+            <nav class="tabs" id="dashTabs" aria-label="Secciones">
+                <a href="#" class="tab active" data-seccion="resumen"><i class="fas fa-chart-line"></i><span>Resumen</span></a>
+            </nav>
+            <p class="nav-label">Sistema y reportes</p>
+            <div class="nav-actions">
+                <button type="button" class="nav-btn js-refresh"><i class="fas fa-rotate"></i><span>Actualizar datos</span></button>
+            </div>
+            <div class="status-card">
+                <h4>Fuente de datos</h4>
+                <p class="status-sub">Supabase · dashboard_data</p>
+                <div class="bar"><i style="width:100%"></i></div>
+                <dl>
+                    <div><dt>Hojas</dt><dd id="stRegistros">—</dd></div>
+                    <div><dt>Sincronizado</dt><dd id="stSync">—</dd></div>
+                </dl>
+            </div>
+        </aside>
+
+        <main class="main">
+            <section id="resumen" class="dashboard-section" hidden>
+                <div class="page-head">
+                    <div>
+                        <h1>Pedidos Comerciales</h1>
+                        <p>TOTTUS · SPSA · Por mes · Por envase</p>
+                    </div>
+                </div>
+                <div class="grid" id="gridResumen"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
