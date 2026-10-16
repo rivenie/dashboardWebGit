@@ -198,9 +198,36 @@ if (!(dL > 0 && dL < 5000)) {
   });
   const topInoperativas = Object.values(maxDLPorPlaca).sort((a, b) => b.dL - a.dL).slice(0, 15);
 
+    // ===== Taller: por fecha y por tipo (TRACTO / ACOPLE / etc.) =====
+  const tallerPorFecha = {}; // { fecha: { TRACTO: {total, dt:[], inop}, ACOPLE: {...} } }
+  filasUnicas.forEach(f => {
+    const fecha = f.fechaReporte;
+    if (!fecha) return;
+    const tipo = (f.tipo || "SIN TIPO").toUpperCase();
+    if (!tallerPorFecha[fecha]) tallerPorFecha[fecha] = {};
+    if (!tallerPorFecha[fecha][tipo]) tallerPorFecha[fecha][tipo] = { total: 0, inoperativas: 0, dt: [] };
+    tallerPorFecha[fecha][tipo].total++;
+    if (f.estado === "INOPERATIVO") tallerPorFecha[fecha][tipo].inoperativas++;
+    if (f.dT > 0) tallerPorFecha[fecha][tipo].dt.push(f.dT);
+  });
+
+  // Para cada tipo, armar serie por fecha con promedio y mediana de D.T.
+  const tiposUnicos = [...new Set(filasUnicas.map(f => (f.tipo || "SIN TIPO").toUpperCase()))];
+  const tallerPorTipo = {};
+  tiposUnicos.forEach(tp => {
+    const fechas = Object.keys(tallerPorFecha).sort();
+    tallerPorTipo[tp] = fechas.map(fecha => {
+      const d = tallerPorFecha[fecha][tp] || { total: 0, inoperativas: 0, dt: [] };
+      const arr = d.dt.slice().sort((a, b) => a - b);
+      const prom = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      const med = arr.length ? (arr.length % 2 ? arr[(arr.length - 1) / 2] : (arr[arr.length / 2 - 1] + arr[arr.length / 2]) / 2) : 0;
+      return { fecha, total: d.total, inoperativas: d.inoperativas, promDT: prom, medDT: med, n: arr.length };
+    });
+  });
+
   return {
     tipo: "FLOTA_DATA",
-    kpis: {
+        kpis: {
       totalRegistros,
       totalUnidades,
       operativas, inoperativas,
@@ -214,8 +241,9 @@ if (!(dL > 0 && dL < 5000)) {
     porLugar: Object.entries(porLugar).map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor),
     porResponsable: Object.entries(porResponsable).map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor),
     porEstatusLog: Object.entries(porEstatusLog).map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor),
-    porFecha: porFechaArr,
+        porFecha: porFechaArr,
     topInoperativas,
+    tallerPorTipo,
     filas: filasUnicas,
   };
 }

@@ -123,7 +123,7 @@ function renderDoughnut(id, labels, data, centerTitle, centerSub, decimals = 0) 
   const lg = $(id + "Legend");
   if (lg) lg.innerHTML = labels.map((l, i) => `<div class="legend-item"><i style="background:${colores[i]}"></i><span title="${l}">${truncar(l, 22)}</span><b>${total ? Math.round((data[i] / total) * 100) : 0}%</b></div>`).join("");
 }
-function renderLine(id, labels, datasets, decimals = 1) {
+function renderLine(id, labels, datasets, decimals = 1, mostrarLabels = true) {
   const maxAll = Math.max(...datasets.flatMap(d => d.data), 0);
   mount(id, {
     type: "line",
@@ -136,7 +136,7 @@ function renderLine(id, labels, datasets, decimals = 1) {
       plugins: {
         legend: { display: datasets.length > 1, position: "bottom", labels: { color: C.dim, usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 14 } },
         tooltip: tooltipStyle(),
-        datalabels: { display: true, align: "top", anchor: "end", offset: 6, color: (c) => c.dataset.borderColor, font: { family: "'IBM Plex Sans', sans-serif", weight: "600", size: 10 }, formatter: (v) => fmt(v, decimals) },
+        datalabels: { display: mostrarLabels, align: "top", anchor: "end", offset: 6, color: (c) => c.dataset.borderColor, font: { family: "'IBM Plex Sans', sans-serif", weight: "600", size: 10 }, formatter: (v) => fmt(v, decimals) },
       },
       scales: { x: scaleX(), y: scaleY(maxAll * 1.18, decimals) } },
   });
@@ -180,6 +180,13 @@ function vacioMensaje(span = 12) {
 }
 
 function construirLayoutInterno() {
+    // Taller
+      $("gridTaller").innerHTML = [
+    plotCard("tlTractosProc", "Tractos y Camiones en proceso", "Total por fecha", 12, "tall"),
+    plotCard("tlTractosDias", "Días en taller - Tractos y Camiones", "Promedio · Mediana · Límite 6", 12, "tall"),
+    plotCard("tlAcoplesProc", "Acoples en proceso", "Total por fecha", 12, "tall"),
+    plotCard("tlAcoplesDias", "Días en taller - Acoples", "Promedio · Mediana · Límite 6", 12, "tall"),
+  ].join("");
   $("filtersCompRes").innerHTML = `
     <div class="filter-chip"><i class="fas fa-circle-check"></i>
       <select id="fEstado" class="filter-select"><option value="">Estado</option></select></div>
@@ -208,6 +215,61 @@ function construirLayoutInterno() {
     slotCard("cdTop", "Top unidades con mayor tiempo inoperativo", "D.L. máximo por placa", 6),
     slotCard("cdTabla", "Detalle de unidades", "Fecha · Placa · Tipo · Estado · Responsable · D.L. · D.T. · D.M.", 12),
   ].join("");
+}
+
+function renderTaller() {
+  if (!state.data || !state.data.tallerPorTipo) { $("gridTaller").innerHTML = vacioMensaje(12); return; }
+  const tt = state.data.tallerPorTipo;
+
+  const normKey = (s) => (s || "").toUpperCase().trim();
+  const TRACTOS = ["TRACTO", "CAMION", "CAMIONETA", "CAMIONETAA", "CAMIONES"];
+  const EXCLUIR = ["SIN TIPO", "VALLE", "DIVEMOTOR"];
+
+  // Sumar por fecha y tipo agrupado
+  const agrupar = (filtro) => {
+    const porFecha = {};
+    Object.entries(tt).forEach(([tipo, serie]) => {
+      if (!filtro(tipo)) return;
+      serie.forEach(d => {
+        if (!porFecha[d.fecha]) porFecha[d.fecha] = { total: 0, inoperativas: 0, dt: [] };
+        porFecha[d.fecha].total += d.total;
+        porFecha[d.fecha].inoperativas += d.inoperativas;
+        if (d.promDT > 0 && d.n > 0) {
+          // reconstruimos aprox: aportamos prom * n
+          for (let k = 0; k < d.n; k++) porFecha[d.fecha].dt.push(d.promDT);
+        }
+      });
+    });
+    return Object.entries(porFecha).sort((a, b) => a[0].localeCompare(b[0])).map(([fecha, d]) => {
+      const arr = d.dt.slice().sort((a, b) => a - b);
+      const prom = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      const med = arr.length ? (arr.length % 2 ? arr[(arr.length - 1) / 2] : (arr[arr.length / 2 - 1] + arr[arr.length / 2]) / 2) : 0;
+      return { fecha, total: d.total, inoperativas: d.inoperativas, promDT: prom, medDT: med };
+    });
+  };
+
+  const esTracto = (t) => TRACTOS.includes(normKey(t));
+  const esAcople = (t) => !TRACTOS.includes(normKey(t)) && !EXCLUIR.includes(normKey(t));
+
+  const tractos = agrupar(esTracto);
+  const acoples = agrupar(esAcople);
+
+  const lT = tractos.map(d => { const [, m, dd] = d.fecha.split("-"); return `${dd}/${m}`; });
+  const lA = acoples.map(d => { const [, m, dd] = d.fecha.split("-"); return `${dd}/${m}`; });
+
+  renderColumns("tlTractosProc", lT, tractos.map(d => d.total), C.goldLight, C.goldDark, 0);
+  renderLine("tlTractosDias", lT, [
+    { label: "Promedio D.T.", color: C.gold, data: tractos.map(d => round(d.promDT, 2)) },
+    { label: "Mediana D.T.", color: C.blue, data: tractos.map(d => round(d.medDT, 2)) },
+    { label: "Límite 6 días", color: C.red, data: tractos.map(() => 6) },
+  ], 2, false);
+
+  renderColumns("tlAcoplesProc", lA, acoples.map(d => d.total), C.orange, C.amber, 0);
+  renderLine("tlAcoplesDias", lA, [
+    { label: "Promedio D.T.", color: C.orange, data: acoples.map(d => round(d.promDT, 2)) },
+    { label: "Mediana D.T.", color: C.blue, data: acoples.map(d => round(d.medDT, 2)) },
+    { label: "Límite 6 días", color: C.red, data: acoples.map(() => 6) },
+  ], 2, false);
 }
 
 function llenarSelect(id, valores, etiqueta) {
@@ -357,12 +419,13 @@ function renderDetalle() {
 function cambiarSubC(sub) {
   subActualC = sub;
   document.querySelectorAll("#subTabsC .subtab").forEach(t => t.classList.toggle("active", t.dataset.sub === sub));
-  ["resumen", "detalle"].forEach(s => {
-    const el = document.getElementById("subC-" + s);
-    if (el) el.style.display = s === sub ? "block" : "none";
-  });
-  if (sub === "resumen") renderResumen();
-  else if (sub === "detalle") renderDetalle();
+  ["resumen", "taller", "detalle"].forEach(s => {
+  const el = document.getElementById("subC-" + s);
+  if (el) el.style.display = s === sub ? "block" : "none";
+});
+if (sub === "resumen") renderResumen();
+else if (sub === "taller") renderTaller();
+else if (sub === "detalle") renderDetalle();
   requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
 }
 
