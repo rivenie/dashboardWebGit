@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Dashboard Logístico | CORE</title>
+    <script>(function(){try{var t=localStorage.getItem('core:theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css?v=4.0.0">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+<body class="is-loading">
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+
+    <header class="topbar">
+        <a class="brand js-go-home" href="index.html" aria-label="CORE · Volver al inicio">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="brand-text"><strong>CORE</strong><span>Logística & Distribución</span></span>
+        </a>
+
+        <nav class="crumbs" id="crumbs" aria-label="Lo que estás viendo"></nav>
+
+        <div class="topbar-right">
+            <div class="sync" id="syncStatus" title="Estado de sincronización con Supabase">
+                <span class="sync-dot"></span>
+                <span class="sync-text" id="syncText">Conectando…</span>
+            </div>
+            <button type="button" class="btn-tool js-refresh" id="btnRefresh" title="Volver a leer Supabase (tecla R)">
+                <i class="fas fa-rotate"></i><span>Actualizar</span>
+            </button>
+            <button type="button" class="icon-btn" id="btnTheme" title="Cambiar tema (tecla T)" aria-label="Cambiar tema">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a class="btn-home js-go-home" href="index.html">
+                <i class="fas fa-arrow-left btn-home-arrow" aria-hidden="true"></i>
+                <span>Volver al inicio</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="shell">
+        <aside class="sidebar">
+            <p class="nav-label">Paneles</p>
+            <nav class="tabs" id="dashTabs" role="tablist" aria-label="Secciones del dashboard"></nav>
+
+            <div class="status-card" id="statusCard">
+                <h4><i class="fas fa-database"></i> Fuente de datos</h4>
+                <p class="status-sub">Supabase · dashboard_data</p>
+                <dl>
+                    <div><dt>Archivo</dt><dd id="stArchivo">—</dd></div>
+                    <div><dt>Excel publicado</dt><dd id="stPublicado">—</dd></div>
+                    <div><dt>Registros</dt><dd id="stRegistros">—</dd></div>
+                    <div><dt>Última consulta</dt><dd id="stSync">—</dd></div>
+                </dl>
+                <p class="status-foot"><kbd>1</kbd>–<kbd>4</kbd> paneles · <kbd>R</kbd> actualizar · <kbd>T</kbd> tema</p>
+            </div>
+        </aside>
+
+        <main class="main" id="main" tabindex="-1">
+            <section class="filterbar" id="filterbar" aria-label="Segmentadores"></section>
+            <div class="context" id="contextBar" aria-live="polite"></div>
+            <div id="globalState"></div>
+
+            <!-- SECCIONES ACTUALIZADAS -->
+            <section id="sec-resumen" class="dash-section" data-seccion="resumen" hidden>
+                <header class="page-head"></header>
+                <div class="kpi-row" id="kpiRow"></div>
+                <div class="grid" id="grid-resumen"></div>
+            </section>
+            
+            <section id="sec-despachos" class="dash-section" data-seccion="despachos" hidden>
+                <header class="page-head"></header>
+                <div class="grid" id="grid-despachos"></div>
+            </section>
+            
+            <section id="sec-destinos" class="dash-section" data-seccion="destinos" hidden>
+                <header class="page-head"></header>
+                <div class="grid" id="grid-destinos"></div>
+            </section>
+            
+            <section id="sec-transportistas" class="dash-section" data-seccion="transportistas" hidden>
+                <header class="page-head"></header>
+                <div class="grid" id="grid-transportistas"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="popover" class="popover" role="tooltip" hidden></div>
+
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+        <header class="drawer-head">
+            <div>
+                <p class="drawer-kicker" id="drawerKicker">Detalle</p>
+                <h2 id="drawerTitle">—</h2>
+            </div>
+            <button type="button" class="icon-btn" id="drawerClose" aria-label="Cerrar detalle"><i class="fas fa-xmark"></i></button>
+        </header>
+        <div class="drawer-body" id="drawerBody"></div>
+        <footer class="drawer-foot" id="drawerFoot"></footer>
+    </aside>
+
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+        <div class="modal-card">
+            <header class="modal-head">
+                <div>
+                    <h2 id="modalTitle">—</h2>
+                    <p id="modalSub"></p>
+                </div>
+                <button type="button" class="icon-btn" id="modalClose" aria-label="Cerrar"><i class="fas fa-xmark"></i></button>
+            </header>
+            <div class="modal-plot"><canvas id="modalCanvas"></canvas></div>
+        </div>
+    </div>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <script src="js/dashboard.js?v=4.0.0"></script>
+</body>
+</html>

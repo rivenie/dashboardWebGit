@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Cargar Excel | CORE Logística & Distribución</title>
+    <script>(function(){try{var t=localStorage.getItem('core:theme');if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/index.css?v=4.0.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <a class="skip-link" href="#workspace">Saltar a la carga del archivo</a>
+
+    <header class="topbar">
+        <a class="brand" href="index.html" aria-label="CORE · Inicio">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="brand-text"><strong>CORE</strong><span>Logística & Distribución</span></span>
+        </a>
+        <div class="topbar-right">
+            <button type="button" class="icon-btn" id="btnTheme" title="Cambiar a tema oscuro" aria-label="Cambiar tema">
+                <i class="fas fa-moon"></i>
+            </button>
+            <a class="btn-dashboard js-go-dashboard" href="dashboard.html">
+                <i class="fas fa-chart-column"></i>
+                <span>Ir al Dashboard</span>
+                <i class="fas fa-arrow-right btn-dashboard-arrow" aria-hidden="true"></i>
+            </a>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="intro">
+            <h1>Cargá el Excel de Hojas de Ruta y publicalo en el dashboard</h1>
+            <p class="lead">Despachos, transferencias, entregas, transportistas y cobertura geográfica en un solo archivo. Revisás lo que se detectó antes de publicar y el dashboard se actualiza solo.</p>
+
+            <article class="published" id="publishedCard" aria-live="polite">
+                <header>
+                    <span class="published-ico"><i class="fas fa-database"></i></span>
+                    <div>
+                        <h2>Datos publicados ahora</h2>
+                        <p id="pubSub">Consultando Supabase…</p>
+                    </div>
+                    <button type="button" class="icon-btn sm" id="btnPubRefresh" title="Volver a consultar" aria-label="Volver a consultar datos publicados"><i class="fas fa-rotate"></i></button>
+                </header>
+                <dl class="published-grid" id="pubGrid">
+                    <div><dt>Registros</dt><dd id="pubRegistros"><span class="sk sk-text"></span></dd></div>
+                    <div><dt>Archivo</dt><dd id="pubArchivo"><span class="sk sk-text"></span></dd></div>
+                    <div><dt>Publicado</dt><dd id="pubFecha"><span class="sk sk-text"></span></dd></div>
+                </dl>
+            </article>
+
+            <ol class="steps" id="steps" aria-label="Pasos para publicar">
+                <li class="step is-current" data-step="1"><span class="step-n">1</span><div><b>Elegí el archivo</b><small>.xlsx, .xls o .xlsm</small></div></li>
+                <li class="step" data-step="2"><span class="step-n">2</span><div><b>Revisá lo detectado</b><small>Columnas, totales y primeras filas</small></div></li>
+                <li class="step" data-step="3"><span class="step-n">3</span><div><b>Publicá</b><small>El dashboard se actualiza al instante</small></div></li>
+            </ol>
+        </section>
+
+        <section class="workspace" id="workspace" aria-label="Carga del archivo">
+            <div class="panel" id="panelUpload">
+                <label class="dropzone" id="dropzone" for="excelFile" tabindex="0">
+                    <input type="file" id="excelFile" accept=".xlsx,.xls,.xlsm">
+                    <span class="drop-ico"><i class="fas fa-file-excel"></i></span>
+                    <span class="drop-title">Arrastrá tu Excel acá</span>
+                    <span class="drop-sub">o hacé clic para elegirlo desde tu equipo</span>
+                    <span class="btn-primary drop-btn"><i class="fas fa-folder-open"></i> Elegir archivo</span>
+                    <span class="drop-hint">Se lee en tu navegador: nada se publica hasta que confirmes.</span>
+                </label>
+            </div>
+
+            <div id="progressBox" class="progress-box" hidden>
+                <div class="progress-head">
+                    <span id="progressLabel">Procesando…</span>
+                    <b id="progressPct">0%</b>
+                </div>
+                <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack">
+                    <div id="progressBar" class="progress-fill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="panel review" id="panelReview" hidden>
+                <header class="review-head">
+                    <span class="file-ico"><i class="fas fa-file-excel"></i></span>
+                    <div class="file-meta">
+                        <h2 id="fileName">archivo.xlsx</h2>
+                        <p id="fileInfo">—</p>
+                    </div>
+                    <label class="sheet-pick" id="sheetPickWrap" hidden>
+                        <span>Hoja</span>
+                        <select id="sheetPick"></select>
+                    </label>
+                </header>
+
+                <div class="kpi-preview" id="kpiPreview"></div>
+
+                <div class="review-block">
+                    <h3>Dimensiones encontradas <small>Se usan como segmentadores en el dashboard</small></h3>
+                    <div class="dims" id="dimsPreview"></div>
+                </div>
+
+                <div class="review-block">
+                    <h3>Columnas reconocidas <small id="colsResumen"></small></h3>
+                    <ul class="cols" id="colsPreview"></ul>
+                </div>
+
+                <div class="review-block">
+                    <h3>Primeras filas <small>Así se van a leer los datos</small></h3>
+                    <div class="tbl-wrap"><table class="tbl" id="previewTable"></table></div>
+                </div>
+
+                <footer class="review-actions">
+                    <button type="button" class="btn-ghost" id="btnOtro"><i class="fas fa-arrow-rotate-left"></i> Elegir otro archivo</button>
+                    <button type="button" class="btn-primary" id="btnSubir"><i class="fas fa-cloud-arrow-up"></i> <span>Publicar en el dashboard</span></button>
+                </footer>
+            </div>
+
+            <div class="panel done" id="panelDone" hidden>
+                <div class="done-badge"><i class="fas fa-check"></i></div>
+                <h2>Datos publicados</h2>
+                <p id="doneText">El dashboard ya tiene la información nueva.</p>
+                <div class="done-actions">
+                    <a class="btn-dashboard lg js-go-dashboard" href="dashboard.html">
+                        <i class="fas fa-chart-column"></i><span>Ir al Dashboard</span>
+                        <i class="fas fa-arrow-right btn-dashboard-arrow" aria-hidden="true"></i>
+                    </a>
+                    <button type="button" class="btn-ghost" id="btnOtroDone"><i class="fas fa-file-arrow-up"></i> Publicar otro archivo</button>
+                </div>
+                <p class="done-note"><i class="fas fa-bolt"></i> Si el dashboard ya está abierto en otra pestaña, se actualiza solo.</p>
+                <p class="done-warn" id="doneWarn" hidden></p>
+            </div>
+
+            <div id="mensaje" class="mensaje" role="status" aria-live="polite" hidden></div>
+        </section>
+    </main>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <script src="js/index.js?v=4.0.0"></script>
+</body>
+</html>
